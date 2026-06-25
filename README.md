@@ -13,7 +13,7 @@ Automated strip mining mod for Minecraft (Fabric).
 
 ## Requirements
 
-- Minecraft 26.1.2
+- Minecraft 26.1.2+
 - Fabric Loader 0.19.3+
 - Fabric API
 - Java 25+
