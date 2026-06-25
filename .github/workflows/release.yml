@@ -56,9 +56,9 @@ jobs:
         uses: cloudnode-pro/modrinth-publish@v2
         with:
           token: ${{ secrets.MODRINTH_PAT }}
-          project-id: "ktM6wXUv"
+          project: "ktM6wXUv"
           version: "v${{ steps.version.outputs.current }}"
-          files: ./build/libs/*.jar
+          files: ./build/libs/autostripmine-${{ steps.version.outputs.current }}.jar
           loaders: |
             fabric
           game-versions: |
