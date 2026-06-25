@@ -52,7 +52,15 @@ jobs:
           git commit -m "Bump version to $new_version [skip ci]"
           git push
 
-      - name: Trigger Modrinth Publish
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: gh workflow run modrinth-publish.yml --ref main
+      - name: Publish to Modrinth
+        uses: cloudnode-pro/modrinth-publish@v2
+        with:
+          token: ${{ secrets.MODRINTH_PAT }}
+          project-id: "ktM6wXUv"
+          version: "v${{ steps.version.outputs.current }}"
+          files: ./build/libs/*.jar
+          loaders: |
+            fabric
+          game-versions: |
+            26.2
+            26.1.2
