@@ -59,8 +59,5 @@ jobs:
           project: "ktM6wXUv"
           version: "v${{ steps.version.outputs.current }}"
           files: ./build/libs/autostripmine-${{ steps.version.outputs.current }}.jar
-          loaders: |
-            fabric
-          game-versions: |
-            26.2
-            26.1.2
+          loaders: '["fabric"]'
+          game-versions: '["26.2", "26.1.2"]'
