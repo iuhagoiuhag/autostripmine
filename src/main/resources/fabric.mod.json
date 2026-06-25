@@ -2,7 +2,6 @@
     "schemaVersion": 1,
     "id": "autostripmine",
     "version": "${version}",
-    "accessWidener": "autostripmine.accesswidener",
     "name": "AutoStripMine",
     "description": "Automated strip mining mod for Minecraft.",
     "authors": [
@@ -32,7 +31,7 @@
     ],
     "depends": {
         "fabricloader": ">=0.19.3",
-        "minecraft": "~26.1.2",
+        "minecraft": "~26.2",
         "java": ">=25",
         "fabric-api": "*"
     }
