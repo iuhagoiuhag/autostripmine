@@ -1,4 +1,4 @@
-# Future Ideas
+# Future Ideas 
 
 - [ ] **Configuration system** — make constants (pitch, scan distance, pause timing, drift parameters) user-configurable via config file or in-game GUI
 - [ ] **Mining pattern options** — branch mining, 3-high tunnels, variable-width tunnels
