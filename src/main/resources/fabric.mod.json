@@ -20,6 +20,9 @@
         ],
         "client": [
             "com.autostripmine.client.AutoStripMineClient"
+        ],
+        "modmenu": [
+            "com.autostripmine.client.integration.ModMenuIntegration"
         ]
     },
     "mixins": [
@@ -31,7 +34,7 @@
     ],
     "depends": {
         "fabricloader": ">=0.19.3",
-        "minecraft": "~26.2",
+        "minecraft": ">=26.1.2 <26.3",
         "java": ">=25",
         "fabric-api": "*"
     }

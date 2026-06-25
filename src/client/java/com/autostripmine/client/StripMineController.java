@@ -1,5 +1,7 @@
 package com.autostripmine.client;
 
+import com.autostripmine.client.config.ConfigManager;
+import com.autostripmine.client.config.ModConfig;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -23,9 +25,6 @@ import java.util.Random;
 public class StripMineController {
     public static boolean ACTIVE;
     public static final Random RANDOM = new Random();
-
-    private static final int SCAN_DISTANCE = 5;
-    private static final float STRIP_PITCH = 35.0f;
 
     private final KeyMapping toggleKey;
     private boolean active;
@@ -103,11 +102,12 @@ public class StripMineController {
 
         if (lastTarget != null && level.getBlockState(lastTarget).isAir()) {
             blocksMined++;
-            if (RANDOM.nextFloat() < 0.08f) {
-                pauseTicks = 4 + RANDOM.nextInt(4);
+            ModConfig c = ConfigManager.getConfig();
+            if (RANDOM.nextFloat() < c.shortPauseChance) {
+                pauseTicks = c.shortPauseMin + RANDOM.nextInt(c.shortPauseMax - c.shortPauseMin + 1);
             }
-            if (blocksMined % (35 + RANDOM.nextInt(16)) == 0) {
-                pauseTicks = 15 + RANDOM.nextInt(10);
+            if (blocksMined % (c.blocksPerLongPauseMin + RANDOM.nextInt(c.blocksPerLongPauseMax - c.blocksPerLongPauseMin + 1)) == 0) {
+                pauseTicks = c.longPauseMin + RANDOM.nextInt(c.longPauseMax - c.longPauseMin + 1);
             }
             lastTarget = null;
         }
@@ -118,9 +118,10 @@ public class StripMineController {
             return;
         }
 
+        double reach = ConfigManager.getConfig().reachDistance;
         Vec3 eyePos = player.getEyePosition(1.0f);
         Vec3 lookVec = player.getLookAngle();
-        Vec3 to = eyePos.add(lookVec.x * 4.5, lookVec.y * 4.5, lookVec.z * 4.5);
+        Vec3 to = eyePos.add(lookVec.x * reach, lookVec.y * reach, lookVec.z * reach);
         ClipContext ctx = new ClipContext(eyePos, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
         BlockHitResult hit = level.clip(ctx);
 
@@ -174,22 +175,24 @@ public class StripMineController {
 
         driftTicker--;
         if (driftTicker <= 0) {
-            driftTicker = 40 + RANDOM.nextInt(60);
-            pitchDriftTarget = (RANDOM.nextFloat() - 0.5f) * 0.6f;
-            yawDriftTarget = (RANDOM.nextFloat() - 0.5f) * 0.25f;
+            ModConfig c = ConfigManager.getConfig();
+            driftTicker = c.driftIntervalMin + RANDOM.nextInt(c.driftIntervalMax - c.driftIntervalMin + 1);
+            pitchDriftTarget = (RANDOM.nextFloat() - 0.5f) * c.pitchDriftRange;
+            yawDriftTarget = (RANDOM.nextFloat() - 0.5f) * c.yawDriftRange;
         }
-        pitchDrift += (pitchDriftTarget - pitchDrift) * 0.02f;
-        yawDrift += (yawDriftTarget - yawDrift) * 0.02f;
+        ModConfig c = ConfigManager.getConfig();
+        pitchDrift += (pitchDriftTarget - pitchDrift) * c.driftLerpSpeed;
+        yawDrift += (yawDriftTarget - yawDrift) * c.driftLerpSpeed;
 
-        rotationPhase += 0.03f;
-        float oscPitch = (float) Math.sin(rotationPhase) * 0.12f;
-        float oscYaw = (float) Math.sin(rotationPhase * 0.7f + 1.0f) * 0.06f;
+        rotationPhase += c.rotationPhaseSpeed;
+        float oscPitch = (float) Math.sin(rotationPhase) * c.pitchOscillation;
+        float oscYaw = (float) Math.sin(rotationPhase * 0.7f + 1.0f) * c.yawOscillation;
 
         float baseYaw = lockedDirection != null ? Direction.getYRot(lockedDirection) : player.getYRot();
-        float targetPitch = STRIP_PITCH + pitchDrift + oscPitch;
+        float targetPitch = c.stripPitch + pitchDrift + oscPitch;
         float targetYaw = baseYaw + yawDrift + oscYaw;
 
-        float lerp = 0.2f;
+        float lerp = c.rotationLerp;
         currentPitch += (targetPitch - currentPitch) * lerp;
         currentYaw += (targetYaw - currentYaw) * lerp;
 
@@ -198,7 +201,8 @@ public class StripMineController {
     }
 
     private BlockPos scanForwardForNextBlock(Level level, BlockPos origin, Direction facing) {
-        for (int d = 1; d <= 4; d++) {
+        int range = ConfigManager.getConfig().scanForwardRange;
+        for (int d = 1; d <= range; d++) {
             BlockPos head = origin.relative(facing, d).above(1);
             BlockPos feet = origin.relative(facing, d);
             if (!level.getBlockState(head).isAir()) {
@@ -215,7 +219,8 @@ public class StripMineController {
         Direction left = facing.getClockWise();
         Direction right = facing.getCounterClockWise();
 
-        for (int d = 1; d <= SCAN_DISTANCE; d++) {
+        int scanDistance = ConfigManager.getConfig().scanDistance;
+        for (int d = 1; d <= scanDistance; d++) {
             BlockPos forward = origin.relative(facing, d);
 
             BlockPos feet = forward;
@@ -240,6 +245,6 @@ public class StripMineController {
 
     private boolean isLava(Level level, BlockPos pos) {
         FluidState fluid = level.getFluidState(pos);
-        return !fluid.isEmpty() && fluid.getType().is(FluidTags.LAVA);
+        return fluid.is(FluidTags.LAVA);
     }
 }
