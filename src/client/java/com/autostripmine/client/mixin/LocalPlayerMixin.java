@@ -7,14 +7,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 @Mixin(LocalPlayer.class)
 public class LocalPlayerMixin {
     @Inject(method = "applyInput", at = @At("TAIL"))
     private void onApplyInput(CallbackInfo ci) {
         if (StripMineController.ACTIVE) {
             LocalPlayer self = (LocalPlayer) (Object) this;
-            self.xxa = 0.0f;
-            self.zza = 1.0f;
+            var rng = ThreadLocalRandom.current();
+            self.xxa = (float)(rng.nextDouble() - 0.5) * 0.04f;
+            self.zza = 0.98f + (float)rng.nextDouble() * 0.04f;
         }
     }
 }

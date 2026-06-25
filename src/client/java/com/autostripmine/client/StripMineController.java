@@ -15,12 +15,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Random;
+
 public class StripMineController {
     public static boolean ACTIVE;
+    public static final Random RANDOM = new Random();
 
     private static final int SCAN_DISTANCE = 5;
     private static final float STRIP_PITCH = 35.0f;
@@ -29,6 +31,19 @@ public class StripMineController {
     private boolean active;
     private Direction lockedDirection;
     private BlockPos lastTarget;
+    private int pauseTicks;
+    private int blocksMined;
+    private boolean aimReady;
+
+    private float currentPitch;
+    private float currentYaw;
+    private float pitchDrift;
+    private float yawDrift;
+    private float pitchDriftTarget;
+    private float yawDriftTarget;
+    private int driftTicker;
+    private float rotationPhase;
+    private boolean rotationInitialized;
 
     public StripMineController() {
         toggleKey = KeyMappingHelper.registerKeyMapping(
@@ -53,6 +68,16 @@ public class StripMineController {
             ACTIVE = active;
             if (active) {
                 lockedDirection = client.player.getDirection();
+                currentPitch = client.player.getXRot();
+                currentYaw = client.player.getYRot();
+                pitchDrift = 0f;
+                yawDrift = 0f;
+                pitchDriftTarget = 0f;
+                yawDriftTarget = 0f;
+                driftTicker = 40;
+                rotationPhase = 0f;
+                rotationInitialized = true;
+                aimReady = false;
                 client.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Activated"));
             } else {
                 client.player.sendSystemMessage(Component.literal("§c[AutoStripMine] Deactivated"));
@@ -66,13 +91,29 @@ public class StripMineController {
         Level level = client.level;
         Direction facing = lockedDirection;
 
-        player.setXRot(STRIP_PITCH);
-        player.setYRot(Direction.getYRot(facing));
+        updateRotation(player);
 
         if (isLavaInPath(level, player.blockPosition(), facing)) {
             active = false;
             ACTIVE = false;
+            lastTarget = null;
             player.sendSystemMessage(Component.literal("§4[AutoStripMine] Lava detected! Mode disabled."));
+            return;
+        }
+
+        if (lastTarget != null && level.getBlockState(lastTarget).isAir()) {
+            blocksMined++;
+            if (RANDOM.nextFloat() < 0.08f) {
+                pauseTicks = 4 + RANDOM.nextInt(4);
+            }
+            if (blocksMined % (35 + RANDOM.nextInt(16)) == 0) {
+                pauseTicks = 15 + RANDOM.nextInt(10);
+            }
+            lastTarget = null;
+        }
+
+        if (pauseTicks > 0) {
+            pauseTicks--;
             lastTarget = null;
             return;
         }
@@ -83,40 +124,77 @@ public class StripMineController {
         ClipContext ctx = new ClipContext(eyePos, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
         BlockHitResult hit = level.clip(ctx);
 
-        BlockPos hitPos;
-        Direction hitSide;
         int baseY = player.blockPosition().getY();
+        BlockPos target = null;
+        Direction targetSide = facing.getOpposite();
+
         if (hit.getType() == HitResult.Type.BLOCK) {
-            hitPos = hit.getBlockPos();
-            hitSide = hit.getDirection();
-        } else {
-            hitPos = player.blockPosition().relative(facing, 1);
-            hitSide = facing.getOpposite();
+            BlockPos hitPos = hit.getBlockPos();
+            BlockPos feetTarget = new BlockPos(hitPos.getX(), baseY, hitPos.getZ());
+            BlockPos headTarget = feetTarget.above(1);
+
+            if (hitPos.equals(headTarget)) {
+                aimReady = true;
+                target = headTarget;
+                targetSide = hit.getDirection();
+            } else if (hitPos.equals(feetTarget) && (aimReady || level.getBlockState(headTarget).isAir())) {
+                aimReady = true;
+                target = feetTarget;
+                targetSide = hit.getDirection();
+            }
         }
 
-        BlockPos feetTarget = new BlockPos(hitPos.getX(), baseY, hitPos.getZ());
-        BlockPos headTarget = feetTarget.above(1);
+        if (target == null && aimReady) {
+            target = scanForwardForNextBlock(level, player.blockPosition(), facing);
+        }
 
-        if (!level.getBlockState(headTarget).isAir()) {
-            updateBlockBreak(client, headTarget, hitSide);
-        } else if (!level.getBlockState(feetTarget).isAir()) {
-            updateBlockBreak(client, feetTarget, hitSide);
-        } else {
-            BlockPos next = scanForwardForNextBlock(level, player.blockPosition(), facing);
-            if (next != null) {
-                updateBlockBreak(client, next, facing.getOpposite());
-            } else {
-                lastTarget = null;
+        if (target != null) {
+            if (!target.equals(lastTarget)) {
+                client.gameMode.startDestroyBlock(target, targetSide);
+                lastTarget = target;
             }
+            client.gameMode.continueDestroyBlock(target, targetSide);
+        } else {
+            lastTarget = null;
         }
     }
 
-    private void updateBlockBreak(Minecraft client, BlockPos pos, Direction side) {
-        if (!pos.equals(lastTarget)) {
-            client.gameMode.startDestroyBlock(pos, side);
-            lastTarget = pos;
+    private void updateRotation(LocalPlayer player) {
+        if (!rotationInitialized) {
+            currentPitch = player.getXRot();
+            currentYaw = player.getYRot();
+            pitchDrift = 0f;
+            yawDrift = 0f;
+            pitchDriftTarget = 0f;
+            yawDriftTarget = 0f;
+            driftTicker = 40;
+            rotationPhase = RANDOM.nextFloat() * 6.28f;
+            rotationInitialized = true;
         }
-        client.gameMode.continueDestroyBlock(pos, side);
+
+        driftTicker--;
+        if (driftTicker <= 0) {
+            driftTicker = 40 + RANDOM.nextInt(60);
+            pitchDriftTarget = (RANDOM.nextFloat() - 0.5f) * 0.6f;
+            yawDriftTarget = (RANDOM.nextFloat() - 0.5f) * 0.25f;
+        }
+        pitchDrift += (pitchDriftTarget - pitchDrift) * 0.02f;
+        yawDrift += (yawDriftTarget - yawDrift) * 0.02f;
+
+        rotationPhase += 0.03f;
+        float oscPitch = (float) Math.sin(rotationPhase) * 0.12f;
+        float oscYaw = (float) Math.sin(rotationPhase * 0.7f + 1.0f) * 0.06f;
+
+        float baseYaw = lockedDirection != null ? Direction.getYRot(lockedDirection) : player.getYRot();
+        float targetPitch = STRIP_PITCH + pitchDrift + oscPitch;
+        float targetYaw = baseYaw + yawDrift + oscYaw;
+
+        float lerp = 0.2f;
+        currentPitch += (targetPitch - currentPitch) * lerp;
+        currentYaw += (targetYaw - currentYaw) * lerp;
+
+        player.setXRot(currentPitch);
+        player.setYRot(currentYaw);
     }
 
     private BlockPos scanForwardForNextBlock(Level level, BlockPos origin, Direction facing) {
@@ -134,11 +212,26 @@ public class StripMineController {
     }
 
     private boolean isLavaInPath(Level level, BlockPos origin, Direction facing) {
+        Direction left = facing.getClockWise();
+        Direction right = facing.getCounterClockWise();
+
         for (int d = 1; d <= SCAN_DISTANCE; d++) {
-            BlockPos head = origin.relative(facing, d).above(1);
-            BlockPos feet = origin.relative(facing, d);
-            BlockPos above = origin.relative(facing, d).above(2);
-            if (isLava(level, head) || isLava(level, feet) || isLava(level, above)) {
+            BlockPos forward = origin.relative(facing, d);
+
+            BlockPos feet = forward;
+            BlockPos head = forward.above(1);
+            BlockPos above = forward.above(2);
+            BlockPos below = forward.below(1);
+
+            BlockPos leftFeet = forward.relative(left, 1);
+            BlockPos leftHead = forward.relative(left, 1).above(1);
+            BlockPos rightFeet = forward.relative(right, 1);
+            BlockPos rightHead = forward.relative(right, 1).above(1);
+
+            if (isLava(level, head) || isLava(level, feet) || isLava(level, above) ||
+                isLava(level, below) ||
+                isLava(level, leftFeet) || isLava(level, leftHead) ||
+                isLava(level, rightFeet) || isLava(level, rightHead)) {
                 return true;
             }
         }
