@@ -2,6 +2,7 @@
     "schemaVersion": 1,
     "id": "autostripmine",
     "version": "${version}",
+    "accessWidener": "autostripmine.accesswidener",
     "name": "AutoStripMine",
     "description": "Automated strip mining mod for Minecraft.",
     "authors": [

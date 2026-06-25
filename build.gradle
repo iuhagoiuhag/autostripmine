@@ -10,6 +10,8 @@ repositories {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/autostripmine.accesswidener")
+
     splitEnvironmentSourceSets()
 
     mods {
