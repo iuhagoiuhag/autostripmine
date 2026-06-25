@@ -51,3 +51,10 @@ jobs:
           git add gradle.properties
           git commit -m "Bump version to $new_version [skip ci]"
           git push
+
+      - name: Trigger Modrinth Publish
+        uses: peter-evans/workflow-dispatch@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
+          workflow: modrinth-publish.yml
+          ref: main
