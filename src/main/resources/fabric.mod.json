@@ -1,0 +1,38 @@
+{
+    "schemaVersion": 1,
+    "id": "autostripmine",
+    "version": "${version}",
+    "name": "AutoStripMine",
+    "description": "Automated strip mining mod for Minecraft.",
+    "authors": [
+        "YourName"
+    ],
+    "contact": {
+        "homepage": "https://fabricmc.net/",
+        "sources": "https://github.com/yourname/autostripmine"
+    },
+    "license": "CC0-1.0",
+    "icon": "assets/autostripmine/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "com.autostripmine.AutoStripMine"
+        ],
+        "client": [
+            "com.autostripmine.client.AutoStripMineClient"
+        ]
+    },
+    "mixins": [
+        "autostripmine.mixins.json",
+        {
+            "config": "autostripmine.client.mixins.json",
+            "environment": "client"
+        }
+    ],
+    "depends": {
+        "fabricloader": ">=0.19.3",
+        "minecraft": "~26.1.2",
+        "java": ">=25",
+        "fabric-api": "*"
+    }
+}
