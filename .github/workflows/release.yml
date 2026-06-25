@@ -53,8 +53,6 @@ jobs:
           git push
 
       - name: Trigger Modrinth Publish
-        uses: peter-evans/workflow-dispatch@v2
-        with:
-          token: ${{ secrets.GH_PAT }}
-          workflow: modrinth-publish.yml
-          ref: main
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: gh workflow run modrinth-publish.yml --ref main
