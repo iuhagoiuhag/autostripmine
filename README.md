@@ -20,7 +20,7 @@ Automated strip mining mod for Minecraft (Fabric).
 
 ## Installation
 
-1. Install Fabric Loader for Minecraft 1.21.1
+1. Install Fabric Loader for Minecraft 26.1.2
 2. Install Fabric API
 3. Place the mod JAR in your `mods` folder
 4. Launch the game
