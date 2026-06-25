@@ -85,6 +85,7 @@ public class StripMineController {
 
         BlockPos hitPos;
         Direction hitSide;
+        int baseY = player.blockPosition().getY();
         if (hit.getType() == HitResult.Type.BLOCK) {
             hitPos = hit.getBlockPos();
             hitSide = hit.getDirection();
@@ -93,15 +94,20 @@ public class StripMineController {
             hitSide = facing.getOpposite();
         }
 
-        BlockPos headTarget = hitPos.above(1);
-        BlockPos feetTarget = hitPos;
+        BlockPos feetTarget = new BlockPos(hitPos.getX(), baseY, hitPos.getZ());
+        BlockPos headTarget = feetTarget.above(1);
 
         if (!level.getBlockState(headTarget).isAir()) {
             updateBlockBreak(client, headTarget, hitSide);
         } else if (!level.getBlockState(feetTarget).isAir()) {
             updateBlockBreak(client, feetTarget, hitSide);
         } else {
-            lastTarget = null;
+            BlockPos next = scanForwardForNextBlock(level, player.blockPosition(), facing);
+            if (next != null) {
+                updateBlockBreak(client, next, facing.getOpposite());
+            } else {
+                lastTarget = null;
+            }
         }
     }
 
@@ -111,6 +117,20 @@ public class StripMineController {
             lastTarget = pos;
         }
         client.gameMode.continueDestroyBlock(pos, side);
+    }
+
+    private BlockPos scanForwardForNextBlock(Level level, BlockPos origin, Direction facing) {
+        for (int d = 1; d <= 4; d++) {
+            BlockPos head = origin.relative(facing, d).above(1);
+            BlockPos feet = origin.relative(facing, d);
+            if (!level.getBlockState(head).isAir()) {
+                return head;
+            }
+            if (!level.getBlockState(feet).isAir()) {
+                return feet;
+            }
+        }
+        return null;
     }
 
     private boolean isLavaInPath(Level level, BlockPos origin, Direction facing) {
