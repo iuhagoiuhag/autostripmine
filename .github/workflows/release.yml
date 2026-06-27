@@ -43,6 +43,13 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
+      - name: Find built jar
+        id: jar
+        run: |
+          JAR=$(ls ./build/libs/autostripmine-*.jar | grep -v sources)
+          echo "path=$JAR" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename $JAR)" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,21 +60,21 @@ jobs:
             --generate-notes \
             ./build/libs/*.jar
 
-      - name: Commit version bump
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add gradle.properties
-          git commit -m "Bump version to $VERSION [skip ci]"
-          git push
-
       - name: Publish to Modrinth
         uses: cloudnode-pro/modrinth-publish@v2
         with:
           token: ${{ secrets.MODRINTH_PAT }}
           project: "ktM6wXUv"
           version: "v${{ steps.version.outputs.version }}"
-          files: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
+          files: ${{ steps.jar.outputs.path }}
           loaders: '["fabric"]'
           game-versions: '["26.2", "26.1.2"]'
+
+      - name: Commit version bump
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add gradle.properties
+          git diff --cached --quiet || git commit -m "Bump version to $VERSION [skip ci]"
+          git push
