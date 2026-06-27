@@ -68,6 +68,6 @@ jobs:
           token: ${{ secrets.MODRINTH_PAT }}
           project: "ktM6wXUv"
           version: "v${{ steps.version.outputs.version }}"
-          files: ./build/libs/autostripmine-*.jar
+          files: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
           loaders: '["fabric"]'
           game-versions: '["26.2", "26.1.2"]'
