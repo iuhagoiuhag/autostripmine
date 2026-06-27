@@ -1,5 +1,6 @@
 package com.autostripmine.client;
 
+import com.autostripmine.client.config.ConfigManager;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
@@ -109,8 +110,8 @@ public class StripMineController {
         double forwardZ = Math.cos(yaw);
 
         // Check multiple blocks ahead in the mining path (2x1 area for each position)
-        final int SCAN_DISTANCE = 5; // blocks ahead to scan
-        for (int i = 0; i <= SCAN_DISTANCE; i++) {
+        int scanDistance = ConfigManager.getConfig().scanDistance;
+        for (int i = 0; i <= scanDistance; i++) {
             int offsetX = (int)Math.round(forwardX * i);
             int offsetZ = (int)Math.round(forwardZ * i);
             
