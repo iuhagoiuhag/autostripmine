@@ -10,6 +10,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,7 +22,7 @@ public class StripMineController {
     
     private long ctrlShiftPressStart = 0;
     private int tickCounter = 0;
-    private boolean lavaDetected = false;
+    private boolean fluidDetected = false;
 
     public StripMineController() {
     }
@@ -37,7 +38,7 @@ public class StripMineController {
         
         if (ACTIVE) {
             holdForwardAndMine();
-            scanForLava();
+            scanForFluid();
         }
     }
 
@@ -92,7 +93,7 @@ public class StripMineController {
 
     private void toggleAutoMine() {
         ACTIVE = !ACTIVE;
-        lavaDetected = false;
+        fluidDetected = false;
         
         if (ACTIVE) {
             mc.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Auto-mining started"));
@@ -121,10 +122,10 @@ public class StripMineController {
         attackKey.setDown(false);
     }
 
-    private void scanForLava() {
+    private void scanForFluid() {
         ModConfig config = ConfigManager.getConfig();
         tickCounter++;
-        if (tickCounter < config.lavaScanInterval) return;
+        if (tickCounter < config.fluidScanInterval) return;
         tickCounter = 0;
 
         LocalPlayer player = mc.player;
@@ -152,15 +153,15 @@ public class StripMineController {
             // Check all 6 sides + inside for each mining position (2x1 area)
             for (BlockPos minePos : minePositions) {
                 // Check the block itself
-                if (isLava(level.getBlockState(minePos))) {
-                    onLavaDetected();
+                if (isFluid(level.getBlockState(minePos))) {
+                    onFluidDetected(level.getBlockState(minePos));
                     return;
                 }
                 // Check all 6 adjacent blocks
                 for (var direction : net.minecraft.core.Direction.values()) {
                     BlockPos adjacent = minePos.relative(direction);
-                    if (isLava(level.getBlockState(adjacent))) {
-                        onLavaDetected();
+                    if (isFluid(level.getBlockState(adjacent))) {
+                        onFluidDetected(level.getBlockState(adjacent));
                         return;
                     }
                 }
@@ -168,16 +169,17 @@ public class StripMineController {
         }
     }
 
-    private boolean isLava(BlockState state) {
-        return state.is(Blocks.LAVA);
+    private boolean isFluid(BlockState state) {
+        return state.getFluidState().is(FluidTags.LAVA) || state.getFluidState().is(FluidTags.WATER);
     }
 
-    private void onLavaDetected() {
-        if (!lavaDetected) {
-            lavaDetected = true;
+    private void onFluidDetected(BlockState state) {
+        if (!fluidDetected) {
+            fluidDetected = true;
             ACTIVE = false;
             releaseKeys();
-            mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] LAVA DETECTED! Auto-mining stopped."));
+            String fluid = state.getFluidState().is(FluidTags.LAVA) ? "LAVA" : "WATER";
+            mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] " + fluid + " DETECTED! Auto-mining stopped."));
         }
     }
 }

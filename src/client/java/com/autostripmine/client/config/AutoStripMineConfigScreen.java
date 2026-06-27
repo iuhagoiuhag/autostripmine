@@ -19,7 +19,7 @@ public class AutoStripMineConfigScreen {
 
         general.addEntry(entryBuilder.startIntSlider(Component.literal("Scan Distance"), config.scanDistance, 1, 10)
                 .setDefaultValue(5)
-                .setTooltip(Component.literal("Blocks to scan ahead for lava"))
+                .setTooltip(Component.literal("Blocks to scan ahead for fluid"))
                 .setSaveConsumer(v -> config.scanDistance = v)
                 .build());
 
@@ -29,10 +29,10 @@ public class AutoStripMineConfigScreen {
                 .setSaveConsumer(v -> config.holdDurationMs = v)
                 .build());
 
-        general.addEntry(entryBuilder.startIntSlider(Component.literal("Lava Scan Interval (ticks)"), config.lavaScanInterval, 1, 50)
+        general.addEntry(entryBuilder.startIntSlider(Component.literal("Fluid Scan Interval (ticks)"), config.fluidScanInterval, 1, 50)
                 .setDefaultValue(10)
-                .setTooltip(Component.literal("Ticks between lava detection scans"))
-                .setSaveConsumer(v -> config.lavaScanInterval = v)
+                .setTooltip(Component.literal("Ticks between fluid detection scans"))
+                .setSaveConsumer(v -> config.fluidScanInterval = v)
                 .build());
 
         general.addEntry(entryBuilder.startStrField(Component.literal("Toggle Key"), config.toggleKey)

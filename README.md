@@ -6,7 +6,7 @@ Automated strip mining mod for Minecraft (Fabric).
 
 * Toggle strip mining by holding down ctrl+shift for 0.5 seconds
 * Automatically mines blocks and moves forward
-* Lava detection: stops automatically when lava is detected in the mining path
+* Fluid detection: stops automatically when water or lava is detected in the mining path
 
 ## Requirements
 
@@ -28,8 +28,8 @@ Press **G** to toggle strip mining on or off. When activated, the mod will:
 
 1. Lock the current facing direction
 2. Begin mining blocks directly ahead at foot and head level
-3. Scan up to 5 blocks ahead for lava in a 3x3 column (configurable)
-4. Automatically stop if lava is detected
+3. Scan up to 5 blocks ahead for fluid in a 3x3 column (configurable)
+4. Automatically stop if fluid is detected
 
 A chat message confirms activation or deactivation.
 
