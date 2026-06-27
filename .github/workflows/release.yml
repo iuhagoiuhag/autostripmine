@@ -1,15 +1,15 @@
-name: Build and Release
+name: Release
 
 on:
-  push:
-    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - uses: actions/checkout@v4
 
@@ -19,35 +19,33 @@ jobs:
           java-version: 25
           distribution: temurin
 
-      - name: Read current version
-        id: version
-        run: |
-          current=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
-          echo "current=$current" >> "$GITHUB_OUTPUT"
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
 
       - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="${{ steps.version.outputs.current }}"
-          gh release create "v$VERSION" \
-            --title "v$VERSION" \
-            --generate-notes \
-            ./build/libs/*.jar
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-jar
+          path: build/libs/*.jar
 
-      - name: Increment and commit version bump
-        run: |
-          current="${{ steps.version.outputs.current }}"
-          IFS='.' read -r major minor patch <<< "$current"
-          new_version="$major.$minor.$((patch + 1))"
+  modrinth:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mod-jar
+          path: build/libs
 
-          sed -i "s/^mod_version=.*/mod_version=$new_version/" gradle.properties
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add gradle.properties
-          git commit -m "Bump version to $new_version [skip ci]"
-          git push
+      - name: Upload to Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ktM6wXUv
+          modrinth-token: ${{ secrets.MODRINTH_PAT }}
+          files: build/libs/*.jar
+          version: ${{ github.event.release.tag_name }}
+          changelog: ${{ github.event.release.body }}
