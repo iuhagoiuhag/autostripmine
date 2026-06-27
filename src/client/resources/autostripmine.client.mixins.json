@@ -1,8 +1,0 @@
-{
-    "required": true,
-    "package": "com.autostripmine.client.mixin",
-    "compatibilityLevel": "JAVA_25",
-    "client": [
-        "LocalPlayerMixin"
-    ]
-}
