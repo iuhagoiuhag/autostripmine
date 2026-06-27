@@ -1,8 +1,0 @@
-{
-    "required": false,
-    "package": "com.autostripmine.mixin",
-    "compatibilityLevel": "JAVA_25",
-    "mixins": [],
-    "client": [],
-    "server": []
-}

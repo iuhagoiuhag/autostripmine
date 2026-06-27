@@ -7,6 +7,14 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
+    maven {
+        name = "Terraformers"
+        url = "https://maven.terraformersmc.com/releases/"
+    }
+    maven {
+        name = "Shedaniel"
+        url = "https://maven.shedaniel.me/"
+    }
 }
 
 loom {
@@ -24,6 +32,8 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+    clientImplementation sourceSets.main.output
 }
 
 processResources {
