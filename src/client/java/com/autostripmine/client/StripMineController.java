@@ -15,19 +15,19 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class StripMineController {
-    private static boolean active = false;
+    private boolean active = false;
 
-    public static boolean isActive() { return active; }
+    public boolean isActive() { return active; }
 
     private final Minecraft mc = Minecraft.getInstance();
-    private final Random random = new Random();
     
     private long ctrlShiftPressStart = 0;
     private int tickCounter = 0;
     private boolean fluidDetected = false;
+    private boolean warnedUnsupportedKey = false;
     
     private boolean isEating = false;
     private boolean wasMiningBeforeEat = false;
@@ -62,6 +62,11 @@ public class StripMineController {
         ModConfig config = ConfigManager.getConfig();
         String toggleKey = config.toggleKey;
         
+        if (!warnedUnsupportedKey) {
+            warnUnsupportedKey(toggleKey);
+            warnedUnsupportedKey = true;
+        }
+
         boolean requiredKeysDown = isToggleKeyComboDown(toggleKey);
         
         if (requiredKeysDown) {
@@ -93,7 +98,7 @@ public class StripMineController {
     }
 
     private int getKeyCode(String key) {
-        return switch (key) {
+        return switch (key.toUpperCase()) {
             case "CTRL" -> InputConstants.KEY_LCONTROL;
             case "SHIFT" -> InputConstants.KEY_LSHIFT;
             case "ALT" -> InputConstants.KEY_LALT;
@@ -105,6 +110,17 @@ public class StripMineController {
             case "SPACE" -> InputConstants.KEY_SPACE;
             default -> -1;
         };
+    }
+
+    private void warnUnsupportedKey(String keyCombo) {
+        if (mc.player == null) return;
+        String[] parts = keyCombo.split("\\+");
+        for (String part : parts) {
+            if (getKeyCode(part.trim()) == -1) {
+                mc.player.sendSystemMessage(Component.literal(
+                    "§c[AutoStripMine] Unsupported key: '" + part.trim() + "'. Supported: CTRL, SHIFT, ALT, G, F, R, E, Q, SPACE"));
+            }
+        }
     }
 
     private void toggleAutoMine() {
@@ -212,7 +228,7 @@ public class StripMineController {
         if (hunger < config.hungerThreshold && hasFoodInOffhand()) {
             if (!waitingToEat) {
                 waitingToEat = true;
-                eatDelayTicks = 5 + random.nextInt(11);
+                eatDelayTicks = 5 + ThreadLocalRandom.current().nextInt(11);
                 eatDelayCounter = 0;
             }
             

@@ -3,7 +3,7 @@
     "id": "autostripmine",
     "version": "${version}",
     "name": "AutoStripMine",
-    "description": "Straight-line replay macro for strip mining.",
+    "description": "Automated strip mining mod with fluid detection and auto-eat.",
     "authors": [
         "ninjabowtie"
     ],
