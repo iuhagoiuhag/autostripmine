@@ -1,250 +1,153 @@
 package com.autostripmine.client;
 
-import com.autostripmine.client.config.ConfigManager;
-import com.autostripmine.client.config.ModConfig;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.tags.FluidTags;
-import net.minecraft.world.level.ClipContext;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
-import org.lwjgl.glfw.GLFW;
-
-import java.util.Random;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class StripMineController {
-    public static boolean ACTIVE;
-    public static final Random RANDOM = new Random();
+    public static boolean ACTIVE = false;
 
-    private final KeyMapping toggleKey;
-    private boolean active;
-    private Direction lockedDirection;
-    private BlockPos lastTarget;
-    private int pauseTicks;
-    private int blocksMined;
-    private boolean aimReady;
-
-    private float currentPitch;
-    private float currentYaw;
-    private float pitchDrift;
-    private float yawDrift;
-    private float pitchDriftTarget;
-    private float yawDriftTarget;
-    private int driftTicker;
-    private float rotationPhase;
-    private boolean rotationInitialized;
+    private final Minecraft mc = Minecraft.getInstance();
+    
+    private long ctrlShiftPressStart = 0;
+    private static final long HOLD_DURATION_MS = 500;
+    private int tickCounter = 0;
+    private static final int LAVA_SCAN_INTERVAL = 10;
+    private boolean lavaDetected = false;
 
     public StripMineController() {
-        toggleKey = KeyMappingHelper.registerKeyMapping(
-                new KeyMapping(
-                        "key.autostripmine.toggle",
-                        InputConstants.Type.KEYSYM,
-                        GLFW.GLFW_KEY_G,
-                        KeyMapping.Category.MISC
-                )
-        );
     }
 
     public void register() {
-        ClientTickEvents.START_CLIENT_TICK.register(this::onTick);
+        ClientTickEvents.END_CLIENT_TICK.register(this::onTick);
     }
 
     private void onTick(Minecraft client) {
         if (client.player == null || client.level == null) return;
 
-        while (toggleKey.consumeClick()) {
-            active = !active;
-            ACTIVE = active;
-            if (active) {
-                lockedDirection = client.player.getDirection();
-                currentPitch = client.player.getXRot();
-                currentYaw = client.player.getYRot();
-                pitchDrift = 0f;
-                yawDrift = 0f;
-                pitchDriftTarget = 0f;
-                yawDriftTarget = 0f;
-                driftTicker = 40;
-                rotationPhase = 0f;
-                rotationInitialized = true;
-                aimReady = false;
-                client.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Activated"));
-            } else {
-                client.player.sendSystemMessage(Component.literal("§c[AutoStripMine] Deactivated"));
-                lastTarget = null;
+        handleToggle();
+        
+        if (ACTIVE) {
+            holdForwardAndMine();
+            scanForLava();
+        }
+    }
+
+    private void handleToggle() {
+        boolean ctrlDown = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL) || 
+                           InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_RCONTROL);
+        boolean shiftDown = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LSHIFT) || 
+                            InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_RSHIFT);
+        
+        boolean bothDown = ctrlDown && shiftDown;
+        
+        if (bothDown) {
+            if (ctrlShiftPressStart == 0) {
+                ctrlShiftPressStart = System.currentTimeMillis();
+            } else if (System.currentTimeMillis() - ctrlShiftPressStart >= HOLD_DURATION_MS) {
+                toggleAutoMine();
+                ctrlShiftPressStart = 0;
             }
-        }
-
-        if (!active) return;
-
-        LocalPlayer player = client.player;
-        Level level = client.level;
-        Direction facing = lockedDirection;
-
-        updateRotation(player);
-
-        if (isLavaInPath(level, player.blockPosition(), facing)) {
-            active = false;
-            ACTIVE = false;
-            lastTarget = null;
-            player.sendSystemMessage(Component.literal("§4[AutoStripMine] Lava detected! Mode disabled."));
-            return;
-        }
-
-        if (lastTarget != null && level.getBlockState(lastTarget).isAir()) {
-            blocksMined++;
-            ModConfig c = ConfigManager.getConfig();
-            if (RANDOM.nextFloat() < c.shortPauseChance) {
-                pauseTicks = c.shortPauseMin + RANDOM.nextInt(c.shortPauseMax - c.shortPauseMin + 1);
-            }
-            if (blocksMined % (c.blocksPerLongPauseMin + RANDOM.nextInt(c.blocksPerLongPauseMax - c.blocksPerLongPauseMin + 1)) == 0) {
-                pauseTicks = c.longPauseMin + RANDOM.nextInt(c.longPauseMax - c.longPauseMin + 1);
-            }
-            lastTarget = null;
-        }
-
-        if (pauseTicks > 0) {
-            pauseTicks--;
-            lastTarget = null;
-            return;
-        }
-
-        double reach = ConfigManager.getConfig().reachDistance;
-        Vec3 eyePos = player.getEyePosition(1.0f);
-        Vec3 lookVec = player.getLookAngle();
-        Vec3 to = eyePos.add(lookVec.x * reach, lookVec.y * reach, lookVec.z * reach);
-        ClipContext ctx = new ClipContext(eyePos, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
-        BlockHitResult hit = level.clip(ctx);
-
-        int baseY = player.blockPosition().getY();
-        BlockPos target = null;
-        Direction targetSide = facing.getOpposite();
-
-        if (hit.getType() == HitResult.Type.BLOCK) {
-            BlockPos hitPos = hit.getBlockPos();
-            BlockPos feetTarget = new BlockPos(hitPos.getX(), baseY, hitPos.getZ());
-            BlockPos headTarget = feetTarget.above(1);
-
-            if (hitPos.equals(headTarget)) {
-                aimReady = true;
-                target = headTarget;
-                targetSide = hit.getDirection();
-            } else if (hitPos.equals(feetTarget) && (aimReady || level.getBlockState(headTarget).isAir())) {
-                aimReady = true;
-                target = feetTarget;
-                targetSide = hit.getDirection();
-            }
-        }
-
-        if (target == null && aimReady) {
-            target = scanForwardForNextBlock(level, player.blockPosition(), facing);
-        }
-
-        if (target != null) {
-            if (!target.equals(lastTarget)) {
-                client.gameMode.startDestroyBlock(target, targetSide);
-                lastTarget = target;
-            }
-            client.gameMode.continueDestroyBlock(target, targetSide);
         } else {
-            lastTarget = null;
+            ctrlShiftPressStart = 0;
         }
     }
 
-    private void updateRotation(LocalPlayer player) {
-        if (!rotationInitialized) {
-            currentPitch = player.getXRot();
-            currentYaw = player.getYRot();
-            pitchDrift = 0f;
-            yawDrift = 0f;
-            pitchDriftTarget = 0f;
-            yawDriftTarget = 0f;
-            driftTicker = 40;
-            rotationPhase = RANDOM.nextFloat() * 6.28f;
-            rotationInitialized = true;
+    private void toggleAutoMine() {
+        ACTIVE = !ACTIVE;
+        lavaDetected = false;
+        
+        if (ACTIVE) {
+            mc.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Auto-mining started"));
+        } else {
+            releaseKeys();
+            mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] Auto-mining stopped"));
         }
-
-        driftTicker--;
-        if (driftTicker <= 0) {
-            ModConfig c = ConfigManager.getConfig();
-            driftTicker = c.driftIntervalMin + RANDOM.nextInt(c.driftIntervalMax - c.driftIntervalMin + 1);
-            pitchDriftTarget = (RANDOM.nextFloat() - 0.5f) * c.pitchDriftRange;
-            yawDriftTarget = (RANDOM.nextFloat() - 0.5f) * c.yawDriftRange;
-        }
-        ModConfig c = ConfigManager.getConfig();
-        pitchDrift += (pitchDriftTarget - pitchDrift) * c.driftLerpSpeed;
-        yawDrift += (yawDriftTarget - yawDrift) * c.driftLerpSpeed;
-
-        rotationPhase += c.rotationPhaseSpeed;
-        float oscPitch = (float) Math.sin(rotationPhase) * c.pitchOscillation;
-        float oscYaw = (float) Math.sin(rotationPhase * 0.7f + 1.0f) * c.yawOscillation;
-
-        float baseYaw = lockedDirection != null ? Direction.getYRot(lockedDirection) : player.getYRot();
-        float targetPitch = c.stripPitch + pitchDrift + oscPitch;
-        float targetYaw = baseYaw + yawDrift + oscYaw;
-
-        float lerp = c.rotationLerp;
-        currentPitch += (targetPitch - currentPitch) * lerp;
-        currentYaw += (targetYaw - currentYaw) * lerp;
-
-        player.setXRot(currentPitch);
-        player.setYRot(currentYaw);
     }
 
-    private BlockPos scanForwardForNextBlock(Level level, BlockPos origin, Direction facing) {
-        int range = ConfigManager.getConfig().scanForwardRange;
-        for (int d = 1; d <= range; d++) {
-            BlockPos head = origin.relative(facing, d).above(1);
-            BlockPos feet = origin.relative(facing, d);
-            if (!level.getBlockState(head).isAir()) {
-                return head;
-            }
-            if (!level.getBlockState(feet).isAir()) {
-                return feet;
-            }
-        }
-        return null;
+    private void holdForwardAndMine() {
+        LocalPlayer player = mc.player;
+        if (player == null) return;
+
+        KeyMapping forwardKey = mc.options.keyUp;
+        KeyMapping attackKey = mc.options.keyAttack;
+
+        forwardKey.setDown(true);
+        attackKey.setDown(true);
     }
 
-    private boolean isLavaInPath(Level level, BlockPos origin, Direction facing) {
-        Direction left = facing.getClockWise();
-        Direction right = facing.getCounterClockWise();
+    private void releaseKeys() {
+        KeyMapping forwardKey = mc.options.keyUp;
+        KeyMapping attackKey = mc.options.keyAttack;
 
-        int scanDistance = ConfigManager.getConfig().scanDistance;
-        for (int d = 1; d <= scanDistance; d++) {
-            BlockPos forward = origin.relative(facing, d);
+        forwardKey.setDown(false);
+        attackKey.setDown(false);
+    }
 
-            BlockPos feet = forward;
-            BlockPos head = forward.above(1);
-            BlockPos above = forward.above(2);
-            BlockPos below = forward.below(1);
+    private void scanForLava() {
+        tickCounter++;
+        if (tickCounter < LAVA_SCAN_INTERVAL) return;
+        tickCounter = 0;
 
-            BlockPos leftFeet = forward.relative(left, 1);
-            BlockPos leftHead = forward.relative(left, 1).above(1);
-            BlockPos rightFeet = forward.relative(right, 1);
-            BlockPos rightHead = forward.relative(right, 1).above(1);
+        LocalPlayer player = mc.player;
+        Level level = mc.level;
+        if (player == null || level == null) return;
 
-            if (isLava(level, head) || isLava(level, feet) || isLava(level, above) ||
-                isLava(level, below) ||
-                isLava(level, leftFeet) || isLava(level, leftHead) ||
-                isLava(level, rightFeet) || isLava(level, rightHead)) {
-                return true;
+        BlockPos playerPos = player.blockPosition();
+        double yaw = Math.toRadians(player.getYRot());
+
+        // Calculate forward direction vector
+        double forwardX = -Math.sin(yaw);
+        double forwardZ = Math.cos(yaw);
+
+        // Check multiple blocks ahead in the mining path (2x1 area for each position)
+        final int SCAN_DISTANCE = 5; // blocks ahead to scan
+        for (int i = 0; i <= SCAN_DISTANCE; i++) {
+            int offsetX = (int)Math.round(forwardX * i);
+            int offsetZ = (int)Math.round(forwardZ * i);
+            
+            BlockPos[] minePositions = new BlockPos[]{
+                new BlockPos(playerPos.getX() + offsetX, playerPos.getY(), playerPos.getZ() + offsetZ),  // feet level
+                new BlockPos(playerPos.getX() + offsetX, playerPos.getY() + 1, playerPos.getZ() + offsetZ)  // head level
+            };
+
+            // Check all 6 sides + inside for each mining position (2x1 area)
+            for (BlockPos minePos : minePositions) {
+                // Check the block itself
+                if (isLava(level.getBlockState(minePos))) {
+                    onLavaDetected();
+                    return;
+                }
+                // Check all 6 adjacent blocks
+                for (var direction : net.minecraft.core.Direction.values()) {
+                    BlockPos adjacent = minePos.relative(direction);
+                    if (isLava(level.getBlockState(adjacent))) {
+                        onLavaDetected();
+                        return;
+                    }
+                }
             }
         }
-        return false;
     }
 
-    private boolean isLava(Level level, BlockPos pos) {
-        FluidState fluid = level.getFluidState(pos);
-        return fluid.is(FluidTags.LAVA);
+    private boolean isLava(BlockState state) {
+        return state.is(Blocks.LAVA);
+    }
+
+    private void onLavaDetected() {
+        if (!lavaDetected) {
+            lavaDetected = true;
+            ACTIVE = false;
+            releaseKeys();
+            mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] LAVA DETECTED! Auto-mining stopped."));
+        }
     }
 }
