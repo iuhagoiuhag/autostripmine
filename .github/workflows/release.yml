@@ -73,12 +73,15 @@ jobs:
           game-versions: '["26.2", "26.1.2"]'
       
       - name: Publish to CurseForge
-        uses: Kir-Sayan/Minotaur@v2
+        uses: Kir-Antipov/mc-publish@v3.3
         with:
-          token: ${{ secrets.CURSEFORGE_TOKEN }}
-          id: "1590029"
+          curseforge-id: "1590029"
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           version: "v${{ steps.version.outputs.version }}"
-          file: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
-          loaders: '["fabric"]'
-          game-versions: '["26.1.2", "26.2"]'
-          release-type: "release"
+          version-type: release
+          files: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
+          loaders: |
+            fabric
+          game-versions: |
+            26.1.2
+            26.2
