@@ -11,6 +11,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -112,9 +114,11 @@ public class StripMineController {
         fluidDetected = false;
         
         if (ACTIVE) {
+            mc.player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0f, 1.5f);
             mc.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Auto-mining started"));
         } else {
             releaseKeys();
+            mc.player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 0.5f, 1.0f);
             mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] Auto-mining stopped"));
         }
     }
