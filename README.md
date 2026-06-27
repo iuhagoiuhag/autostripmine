@@ -17,21 +17,21 @@ Automated strip mining mod for Minecraft (Fabric).
 
 ## Installation
 
-1. Install Fabric Loader for Minecraft 26.2
+1. Install Fabric Loader for Minecraft 26.1.2+
 2. Install Fabric API
 3. Place the mod JAR in your `mods` folder
 4. Launch the game
 
 ## Usage
 
-Press **G** to toggle strip mining on or off. When activated, the mod will:
+Press **Ctrl + Shift** to toggle strip mining on or off. When activated, the mod will:
 
-1. Lock the current facing direction
-2. Begin mining blocks directly ahead at foot and head level
+1. Begin mining blocks
+2. Continuously move forward
 3. Scan up to 5 blocks ahead for fluid in a 3x3 column (configurable)
 4. Automatically stop if fluid is detected
 
-A chat message confirms activation or deactivation.
+A chat message and sound effect confirms activation or deactivation.
 
 ## Configuration
 
