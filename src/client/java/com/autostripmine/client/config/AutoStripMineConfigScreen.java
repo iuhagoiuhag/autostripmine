@@ -23,12 +23,6 @@ public class AutoStripMineConfigScreen {
                 .setSaveConsumer(v -> config.scanDistance = v)
                 .build());
 
-        general.addEntry(entryBuilder.startIntSlider(Component.literal("Scan Forward Range"), config.scanForwardRange, 1, 10)
-                .setDefaultValue(4)
-                .setTooltip(Component.literal("Blocks to scan ahead for next target"))
-                .setSaveConsumer(v -> config.scanForwardRange = v)
-                .build());
-
         builder.setSavingRunnable(ConfigManager::save);
 
         return builder.build();
