@@ -70,6 +70,20 @@ jobs:
           loaders: '["fabric"]'
           game-versions: '["26.2", "26.1.2"]'
 
+      - name: Publish to CurseForge
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: "1590029"
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+          version: "v${{ steps.version.outputs.version }}"
+          version-type: release
+          files: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
+          loaders: |
+            fabric
+          game-versions: |
+            26.1.2
+            26.2
+
       - name: Commit version bump
         run: |
           VERSION="${{ steps.version.outputs.version }}"
