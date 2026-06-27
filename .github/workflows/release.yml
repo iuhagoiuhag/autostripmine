@@ -71,3 +71,14 @@ jobs:
           files: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
           loaders: '["fabric"]'
           game-versions: '["26.2", "26.1.2"]'
+      
+      - name: Publish to CurseForge
+        uses: Kir-Sayan/Minotaur@v2
+        with:
+          token: ${{ secrets.CURSEFORGE_TOKEN }}
+          id: "1590029"
+          version: "v${{ steps.version.outputs.version }}"
+          file: ./build/libs/autostripmine-${{ steps.version.outputs.version }}.jar
+          loaders: '["fabric"]'
+          game-versions: '["26.1.2", "26.2"]'
+          release-type: "release"
