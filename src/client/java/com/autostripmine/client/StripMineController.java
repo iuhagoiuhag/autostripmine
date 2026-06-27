@@ -10,19 +10,17 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.FluidTags;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import java.util.Random;
 
 public class StripMineController {
-    public static boolean ACTIVE = false;
+    private static boolean active = false;
+
+    public static boolean isActive() { return active; }
 
     private final Minecraft mc = Minecraft.getInstance();
     private final Random random = new Random();
@@ -49,7 +47,7 @@ public class StripMineController {
 
         handleToggle();
         
-        if (ACTIVE) {
+        if (active) {
             if (isEating) {
                 handleEating();
             } else {
@@ -110,10 +108,10 @@ public class StripMineController {
     }
 
     private void toggleAutoMine() {
-        ACTIVE = !ACTIVE;
+        active = !active;
         fluidDetected = false;
         
-        if (ACTIVE) {
+        if (active) {
             mc.player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0f, 1.5f);
             mc.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Auto-mining started"));
         } else {
@@ -196,7 +194,7 @@ public class StripMineController {
     private void onFluidDetected(BlockState state) {
         if (!fluidDetected) {
             fluidDetected = true;
-            ACTIVE = false;
+            active = false;
             releaseKeys();
             String fluid = state.getFluidState().is(FluidTags.LAVA) ? "LAVA" : "WATER";
             mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] " + fluid + " DETECTED! Auto-mining stopped."));
@@ -239,7 +237,7 @@ public class StripMineController {
 
     private void startEating() {
         isEating = true;
-        wasMiningBeforeEat = ACTIVE;
+        wasMiningBeforeEat = active;
         
         releaseKeys();
         
@@ -284,7 +282,7 @@ public class StripMineController {
         mc.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Hunger restored, resuming mining"));
         
         if (wasMiningBeforeEat) {
-            ACTIVE = true;
+            active = true;
             holdForwardAndMine();
         }
     }

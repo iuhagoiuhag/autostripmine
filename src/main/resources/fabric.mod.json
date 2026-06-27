@@ -5,13 +5,13 @@
     "name": "AutoStripMine",
     "description": "Straight-line replay macro for strip mining.",
     "authors": [
-        "YourName"
+        "ninjabowtie"
     ],
     "contact": {
-        "homepage": "https://fabricmc.net/",
-        "sources": "https://github.com/yourname/autostripmine"
+        "homepage": "https://github.com/iuhagoiuhag/autostripmine",
+        "sources": "https://github.com/iuhagoiuhag/autostripmine"
     },
-    "license": "CC0-1.0",
+    "license": "Apache-2.0",
     "icon": "assets/autostripmine/icon.png",
     "environment": "client",
     "entrypoints": {
