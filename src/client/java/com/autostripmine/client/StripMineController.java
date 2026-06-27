@@ -8,21 +8,32 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import java.util.Random;
 
 public class StripMineController {
     public static boolean ACTIVE = false;
 
     private final Minecraft mc = Minecraft.getInstance();
+    private final Random random = new Random();
     
     private long ctrlShiftPressStart = 0;
     private int tickCounter = 0;
     private boolean fluidDetected = false;
+    
+    private boolean isEating = false;
+    private boolean wasMiningBeforeEat = false;
+    private boolean waitingToEat = false;
+    private int eatDelayTicks = 0;
+    private int eatDelayCounter = 0;
 
     public StripMineController() {
     }
@@ -37,8 +48,13 @@ public class StripMineController {
         handleToggle();
         
         if (ACTIVE) {
-            holdForwardAndMine();
-            scanForFluid();
+            if (isEating) {
+                handleEating();
+            } else {
+                holdForwardAndMine();
+                scanForFluid();
+                checkHunger();
+            }
         }
     }
 
@@ -180,6 +196,92 @@ public class StripMineController {
             releaseKeys();
             String fluid = state.getFluidState().is(FluidTags.LAVA) ? "LAVA" : "WATER";
             mc.player.sendSystemMessage(Component.literal("§c[AutoStripMine] " + fluid + " DETECTED! Auto-mining stopped."));
+        }
+    }
+
+    private void checkHunger() {
+        ModConfig config = ConfigManager.getConfig();
+        if (!config.autoEatEnabled) return;
+        
+        LocalPlayer player = mc.player;
+        if (player == null) return;
+        
+        int hunger = player.getFoodData().getFoodLevel();
+        if (hunger < config.hungerThreshold && hasFoodInOffhand()) {
+            if (!waitingToEat) {
+                waitingToEat = true;
+                eatDelayTicks = 5 + random.nextInt(11);
+                eatDelayCounter = 0;
+            }
+            
+            eatDelayCounter++;
+            if (eatDelayCounter >= eatDelayTicks) {
+                waitingToEat = false;
+                startEating();
+            }
+        } else {
+            waitingToEat = false;
+            eatDelayCounter = 0;
+        }
+    }
+
+    private boolean hasFoodInOffhand() {
+        LocalPlayer player = mc.player;
+        if (player == null) return false;
+        
+        ItemStack offhandStack = player.getOffhandItem();
+        return offhandStack.has(DataComponents.FOOD);
+    }
+
+    private void startEating() {
+        isEating = true;
+        wasMiningBeforeEat = ACTIVE;
+        
+        releaseKeys();
+        
+        mc.player.sendSystemMessage(Component.literal("§e[AutoStripMine] Eating to restore hunger..."));
+        
+        mc.options.keyUse.setDown(true);
+    }
+
+    private void handleEating() {
+        LocalPlayer player = mc.player;
+        if (player == null) {
+            stopEating();
+            return;
+        }
+        
+        if (!hasFoodInOffhand()) {
+            stopEating();
+            return;
+        }
+        
+        int hunger = player.getFoodData().getFoodLevel();
+        ModConfig config = ConfigManager.getConfig();
+        
+        if (hunger >= config.hungerThreshold) {
+            stopEating();
+            return;
+        }
+        
+        if (!player.isUsingItem()) {
+            mc.options.keyUse.setDown(true);
+        }
+    }
+
+    private void stopEating() {
+        isEating = false;
+        mc.options.keyUse.setDown(false);
+        
+        if (mc.player != null && mc.player.isUsingItem()) {
+            mc.player.stopUsingItem();
+        }
+        
+        mc.player.sendSystemMessage(Component.literal("§a[AutoStripMine] Hunger restored, resuming mining"));
+        
+        if (wasMiningBeforeEat) {
+            ACTIVE = true;
+            holdForwardAndMine();
         }
     }
 }

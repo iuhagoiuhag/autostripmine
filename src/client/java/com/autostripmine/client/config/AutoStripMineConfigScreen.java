@@ -41,6 +41,18 @@ public class AutoStripMineConfigScreen {
                 .setSaveConsumer(v -> config.toggleKey = v.toUpperCase())
                 .build());
 
+        general.addEntry(entryBuilder.startBooleanToggle(Component.literal("Auto Eat Enabled"), config.autoEatEnabled)
+                .setDefaultValue(true)
+                .setTooltip(Component.literal("Automatically eat from offhand when hunger is low while mining"))
+                .setSaveConsumer(v -> config.autoEatEnabled = v)
+                .build());
+
+        general.addEntry(entryBuilder.startIntSlider(Component.literal("Hunger Threshold"), config.hungerThreshold, 1, 19)
+                .setDefaultValue(12)
+                .setTooltip(Component.literal("Eat when hunger drops below this level (1-19, where 20 is full)"))
+                .setSaveConsumer(v -> config.hungerThreshold = v)
+                .build());
+
         builder.setSavingRunnable(ConfigManager::save);
 
         return builder.build();
