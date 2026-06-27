@@ -4,15 +4,9 @@ Automated strip mining mod for Minecraft (Fabric).
 
 ## Features
 
-* Toggle strip mining with the G key
-* Mines blocks in a straight line at player feet and head level
-* Configurable lava detection with configurable scan distance
-* Humanized rotation movement with smooth drift and sinusoidal oscillation
-* Randomized short and long pause timing to mimic human behavior
-* Blocks mined counter with periodic longer pauses
-* Aim ready state machine for natural targeting adjustment
-* Configurable via `config/autostripmine.json` (auto created on first run)
-* ModMenu integration for in game configuration (requires Cloth Config)
+* Toggle strip mining by holding down ctrl+shift for 0.5 seconds
+* Automatically mines blocks and moves forward
+* Lava detection: stops automatically when lava is detected in the mining path
 
 ## Requirements
 
