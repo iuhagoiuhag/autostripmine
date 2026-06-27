@@ -1,6 +1,7 @@
 package com.autostripmine.client;
 
 import com.autostripmine.client.config.ConfigManager;
+import com.autostripmine.client.config.ModConfig;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.KeyMapping;
@@ -19,9 +20,7 @@ public class StripMineController {
     private final Minecraft mc = Minecraft.getInstance();
     
     private long ctrlShiftPressStart = 0;
-    private static final long HOLD_DURATION_MS = 500;
     private int tickCounter = 0;
-    private static final int LAVA_SCAN_INTERVAL = 10;
     private boolean lavaDetected = false;
 
     public StripMineController() {
@@ -43,23 +42,52 @@ public class StripMineController {
     }
 
     private void handleToggle() {
-        boolean ctrlDown = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LCONTROL) || 
-                           InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_RCONTROL);
-        boolean shiftDown = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_LSHIFT) || 
-                            InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_RSHIFT);
+        ModConfig config = ConfigManager.getConfig();
+        String toggleKey = config.toggleKey;
         
-        boolean bothDown = ctrlDown && shiftDown;
+        boolean requiredKeysDown = isToggleKeyComboDown(toggleKey);
         
-        if (bothDown) {
+        if (requiredKeysDown) {
             if (ctrlShiftPressStart == 0) {
                 ctrlShiftPressStart = System.currentTimeMillis();
-            } else if (System.currentTimeMillis() - ctrlShiftPressStart >= HOLD_DURATION_MS) {
+            } else if (System.currentTimeMillis() - ctrlShiftPressStart >= config.holdDurationMs) {
                 toggleAutoMine();
                 ctrlShiftPressStart = 0;
             }
         } else {
             ctrlShiftPressStart = 0;
         }
+    }
+
+    private boolean isToggleKeyComboDown(String keyCombo) {
+        String[] parts = keyCombo.split("\\+");
+        boolean allDown = true;
+        
+        for (String part : parts) {
+            String key = part.trim();
+            int keyCode = getKeyCode(key);
+            if (keyCode == -1 || !InputConstants.isKeyDown(mc.getWindow(), keyCode)) {
+                allDown = false;
+                break;
+            }
+        }
+        
+        return allDown;
+    }
+
+    private int getKeyCode(String key) {
+        return switch (key) {
+            case "CTRL" -> InputConstants.KEY_LCONTROL;
+            case "SHIFT" -> InputConstants.KEY_LSHIFT;
+            case "ALT" -> InputConstants.KEY_LALT;
+            case "G" -> InputConstants.KEY_G;
+            case "F" -> InputConstants.KEY_F;
+            case "R" -> InputConstants.KEY_R;
+            case "E" -> InputConstants.KEY_E;
+            case "Q" -> InputConstants.KEY_Q;
+            case "SPACE" -> InputConstants.KEY_SPACE;
+            default -> -1;
+        };
     }
 
     private void toggleAutoMine() {
@@ -94,8 +122,9 @@ public class StripMineController {
     }
 
     private void scanForLava() {
+        ModConfig config = ConfigManager.getConfig();
         tickCounter++;
-        if (tickCounter < LAVA_SCAN_INTERVAL) return;
+        if (tickCounter < config.lavaScanInterval) return;
         tickCounter = 0;
 
         LocalPlayer player = mc.player;
@@ -110,7 +139,7 @@ public class StripMineController {
         double forwardZ = Math.cos(yaw);
 
         // Check multiple blocks ahead in the mining path (2x1 area for each position)
-        int scanDistance = ConfigManager.getConfig().scanDistance;
+        int scanDistance = config.scanDistance;
         for (int i = 0; i <= scanDistance; i++) {
             int offsetX = (int)Math.round(forwardX * i);
             int offsetZ = (int)Math.round(forwardZ * i);

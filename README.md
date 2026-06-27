@@ -35,7 +35,7 @@ A chat message confirms activation or deactivation.
 
 ## Configuration
 
-All settings are stored in `config/autostripmine.json` and can be edited manually or via ModMenu (if Cloth Config is installed). Configurable parameters include scan distance, pitch angle, reach distance, pause timing, drift parameters, and oscillation amplitudes.
+All settings are stored in `config/autostripmine.json` and can be edited manually or via ModMenu (if Cloth Config is installed).
 
 ## Building
 

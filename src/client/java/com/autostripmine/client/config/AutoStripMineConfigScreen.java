@@ -23,6 +23,24 @@ public class AutoStripMineConfigScreen {
                 .setSaveConsumer(v -> config.scanDistance = v)
                 .build());
 
+        general.addEntry(entryBuilder.startIntSlider(Component.literal("Hold Duration (ms)"), config.holdDurationMs, 100, 2000)
+                .setDefaultValue(500)
+                .setTooltip(Component.literal("Milliseconds to hold the toggle key to activate mining"))
+                .setSaveConsumer(v -> config.holdDurationMs = v)
+                .build());
+
+        general.addEntry(entryBuilder.startIntSlider(Component.literal("Lava Scan Interval (ticks)"), config.lavaScanInterval, 1, 50)
+                .setDefaultValue(10)
+                .setTooltip(Component.literal("Ticks between lava detection scans"))
+                .setSaveConsumer(v -> config.lavaScanInterval = v)
+                .build());
+
+        general.addEntry(entryBuilder.startStrField(Component.literal("Toggle Key"), config.toggleKey)
+                .setDefaultValue("CTRL+SHIFT")
+                .setTooltip(Component.literal("Key combination to toggle mining (e.g. CTRL+SHIFT, SHIFT+G, G)"))
+                .setSaveConsumer(v -> config.toggleKey = v.toUpperCase())
+                .build());
+
         builder.setSavingRunnable(ConfigManager::save);
 
         return builder.build();
